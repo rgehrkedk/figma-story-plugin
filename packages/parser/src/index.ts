@@ -1,11 +1,14 @@
 // Token parsing and analysis for figma-story-plugin
 
 import type { DesignToken } from '@figma-story-plugin/shared';
+import postcss from 'postcss';
+import valueParser from 'postcss-value-parser';
 
 export interface ParseOptions {
   includeCSSVariables?: boolean;
   includeJSTokens?: boolean;
   tokenPaths?: string[];
+  colorFormats?: ('hex' | 'rgb' | 'hsl' | 'named')[];
 }
 
 export interface ParseResult {
@@ -21,7 +24,72 @@ export interface ParseError {
 }
 
 export class TokenParser {
-  constructor(private options: ParseOptions = {}) {}
+  constructor(private options: ParseOptions = {}) {
+    // Default to all color formats if none specified
+    if (!this.options.colorFormats) {
+      this.options.colorFormats = ['hex', 'rgb', 'hsl', 'named'];
+    }
+  }
+
+  private isColorValue(value: string): boolean {
+    const formats = this.options.colorFormats || ['hex', 'rgb', 'hsl', 'named'];
+    const trimmedValue = value.trim().toLowerCase();
+
+    // Hex colors
+    if (formats.includes('hex') && trimmedValue.match(/^#[0-9a-f]{3,8}$/i)) {
+      return true;
+    }
+
+    // RGB/RGBA colors
+    if (formats.includes('rgb') && trimmedValue.match(/^rgba?\s*\(/)) {
+      return true;
+    }
+
+    // HSL/HSLA colors
+    if (formats.includes('hsl') && trimmedValue.match(/^hsla?\s*\(/)) {
+      return true;
+    }
+
+    // Named colors
+    if (formats.includes('named')) {
+      const namedColors = [
+        'transparent', 'currentcolor', 'inherit', 'initial', 'unset',
+        'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige',
+        'bisque', 'black', 'blanchedalmond', 'blue', 'blueviolet', 'brown',
+        'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
+        'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
+        'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey', 'darkkhaki',
+        'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
+        'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
+        'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink',
+        'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick',
+        'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro', 'ghostwhite',
+        'gold', 'goldenrod', 'gray', 'green', 'greenyellow', 'grey',
+        'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki',
+        'lavender', 'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue',
+        'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray',
+        'lightgreen', 'lightgrey', 'lightpink', 'lightsalmon', 'lightseagreen',
+        'lightskyblue', 'lightslategray', 'lightslategrey', 'lightsteelblue',
+        'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon',
+        'mediumaquamarine', 'mediumblue', 'mediumorchid', 'mediumpurple',
+        'mediumseagreen', 'mediumslateblue', 'mediumspringgreen',
+        'mediumturquoise', 'mediumvioletred', 'midnightblue', 'mintcream',
+        'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive',
+        'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod',
+        'palegreen', 'paleturquoise', 'palevioletred', 'papayawhip',
+        'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
+        'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown',
+        'seagreen', 'seashell', 'sienna', 'silver', 'skyblue', 'slateblue',
+        'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue', 'tan',
+        'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white',
+        'whitesmoke', 'yellow', 'yellowgreen'
+      ];
+      
+      return namedColors.includes(trimmedValue);
+    }
+
+    return false;
+  }
 
   async parseCSS(css: string, filename?: string): Promise<ParseResult> {
     const tokens: DesignToken[] = [];
@@ -37,48 +105,52 @@ export class TokenParser {
         throw new Error('CSS input too large (max 10MB)');
       }
 
-      // Basic CSS custom properties regex (safer than eval)
-      const cssVariableRegex = /--([a-zA-Z0-9-_]+)\s*:\s*([^;]+);/g;
-      let match;
+      // Use PostCSS for proper parsing
+      const root = postcss.parse(css, { from: filename });
 
-      while ((match = cssVariableRegex.exec(css)) !== null) {
-        const [, name, value] = match;
-        
-        if (!name || !value) continue;
+      root.walkDecls((decl) => {
+        // Only process CSS custom properties (variables)
+        if (!decl.prop.startsWith('--')) return;
+
+        const name = decl.prop.substring(2); // Remove --
+        const value = decl.value.trim();
 
         // Sanitize and validate
         const sanitizedName = name.replace(/[^a-zA-Z0-9-_]/g, '');
-        const sanitizedValue = value.trim().replace(/[<>'"]/g, '');
-        
-        if (sanitizedName.length === 0 || sanitizedValue.length === 0) continue;
+        if (sanitizedName.length === 0 || value.length === 0) return;
 
-        // Infer token type from value
-        let tokenType: DesignToken['type'] = 'spacing';
-        
-        if (sanitizedValue.match(/^#[0-9a-fA-F]{3,8}$/) || 
-            sanitizedValue.match(/^rgb/) || 
-            sanitizedValue.match(/^hsl/) ||
-            sanitizedValue.match(/^(red|blue|green|white|black|gray|transparent)$/i)) {
-          tokenType = 'color';
-        } else if (sanitizedValue.match(/^\d+(\.\d+)?(px|rem|em|pt)$/) ||
-                   sanitizedValue.match(/^bold|normal|italic$/i) ||
-                   sanitizedValue.match(/^['"]/)) {
-          tokenType = 'typography';
-        } else if (sanitizedValue.match(/shadow|blur|opacity/i)) {
-          tokenType = 'effect';
+        // Focus on color tokens for this iteration
+        if (this.isColorValue(value)) {
+          // Use PostCSS value parser for complex values
+          const parsedValue = valueParser(value);
+          let resolvedValue = value;
+
+          // Handle var() references
+          parsedValue.walk((node) => {
+            if (node.type === 'function' && node.value === 'var') {
+              const varName = node.nodes[0]?.value;
+              if (varName) {
+                // For now, keep the var() reference as-is
+                // In a full implementation, we'd resolve these references
+                resolvedValue = value;
+              }
+            }
+          });
+
+          tokens.push({
+            name: `--${sanitizedName}`,
+            value: resolvedValue,
+            type: 'color',
+            path: ['css', 'custom-properties', sanitizedName]
+          });
         }
-
-        tokens.push({
-          name: `--${sanitizedName}`,
-          value: sanitizedValue,
-          type: tokenType,
-          path: ['css', 'custom-properties', sanitizedName]
-        });
-      }
+      });
 
     } catch (error) {
       errors.push({
         message: error instanceof Error ? error.message : 'Unknown parsing error',
+        line: error instanceof Error && 'line' in error ? (error as any).line : undefined,
+        column: error instanceof Error && 'column' in error ? (error as any).column : undefined,
         file: filename
       });
     }

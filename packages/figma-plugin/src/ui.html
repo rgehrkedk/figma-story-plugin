@@ -2,109 +2,379 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Figma Story Plugin</title>
+  <title>Figma Story Sync</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 12px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       padding: 16px;
       background: #ffffff;
+      font-size: 12px;
+      line-height: 1.4;
     }
     
     .container {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      max-width: 300px;
     }
     
     .header {
-      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    
+    .header h1 {
+      margin: 0;
       font-size: 14px;
-      color: #333;
+      font-weight: 600;
+      color: #1e1e1e;
     }
     
     .status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
       padding: 8px 12px;
-      border-radius: 4px;
-      background: #f0f0f0;
-      color: #666;
+      border-radius: 6px;
       font-size: 11px;
+    }
+    
+    .status.disconnected {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    .status.connected {
+      background: #e8f5e8;
+      color: #2e7d2e;
+    }
+    
+    .status.connecting {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status.disconnected .status-dot {
+      background: #c62828;
+    }
+    
+    .status.connected .status-dot {
+      background: #2e7d2e;
+    }
+    
+    .status.connecting .status-dot {
+      background: #ef6c00;
+    }
+    
+    .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #1e1e1e;
+      font-size: 11px;
+    }
+    
+    .form-group input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: inherit;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #18a0fb;
+      box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.2);
     }
     
     .button {
+      width: 100%;
+      box-sizing: border-box;
       padding: 8px 12px;
-      border: none;
-      border-radius: 4px;
-      background: #0d99ff;
+      background: #18a0fb;
       color: white;
-      cursor: pointer;
+      border: none;
+      border-radius: 6px;
       font-size: 11px;
       font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      margin-bottom: 8px;
     }
     
     .button:hover {
-      background: #0b8ce8;
+      background: #147ce0;
     }
     
     .button:disabled {
-      background: #ccc;
+      background: #d0d0d0;
       cursor: not-allowed;
+    }
+    
+    .button.secondary {
+      background: #f0f0f0;
+      color: #1e1e1e;
+    }
+    
+    .button.secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .log {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e5e5;
+    }
+    
+    .log h3 {
+      margin: 0 0 8px 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .log-content {
+      background: #f8f8f8;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 10px;
+      color: #666;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .token-count {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">Figma Story Sync</div>
-    <div class="status" id="status">
-      Ready to sync design tokens
+    <div class="header">
+      <h1>Figma Story Sync</h1>
     </div>
-    <button class="button" id="connectBtn">
-      Connect to Storybook
-    </button>
-    <button class="button" id="syncBtn" disabled>
-      Sync Tokens
-    </button>
+    
+    <div id="status" class="status disconnected">
+      <div class="status-dot"></div>
+      <span>Disconnected from bridge</span>
+    </div>
+    
+    <div class="form-group">
+      <label for="bridge-url">Bridge URL:</label>
+      <input type="text" id="bridge-url" value="ws://localhost:8080" placeholder="ws://localhost:8080">
+    </div>
+    
+    <div class="form-group">
+      <label for="auth-token">Auth Token:</label>
+      <input type="password" id="auth-token" placeholder="Enter bridge auth token">
+    </div>
+    
+    <button id="connect-btn" class="button">Connect to Bridge</button>
+    <button id="disconnect-btn" class="button secondary" style="display: none;">Disconnect</button>
+    
+    <div class="token-count" id="token-count">
+      No tokens received
+    </div>
+    
+    <div class="log">
+      <h3>Connection Log</h3>
+      <div id="log-content" class="log-content">Ready to connect...</div>
+    </div>
   </div>
 
   <script>
+    let ws = null;
+    let isConnected = false;
+    let tokenCount = 0;
+
     const statusEl = document.getElementById('status');
-    const connectBtn = document.getElementById('connectBtn');
-    const syncBtn = document.getElementById('syncBtn');
+    const bridgeUrlEl = document.getElementById('bridge-url');
+    const authTokenEl = document.getElementById('auth-token');
+    const connectBtn = document.getElementById('connect-btn');
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    const logContent = document.getElementById('log-content');
+    const tokenCountEl = document.getElementById('token-count');
 
-    // TODO: Implement WebSocket connection to bridge
-    connectBtn.onclick = () => {
-      statusEl.textContent = 'Connecting...';
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      logContent.textContent += `[${timestamp}] ${message}\n`;
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    function updateStatus(status, message) {
+      statusEl.className = `status ${status}`;
+      statusEl.querySelector('span').textContent = message;
+    }
+
+    function updateTokenCount(count) {
+      tokenCount = count;
+      tokenCountEl.textContent = count > 0 ? `${count} tokens received` : 'No tokens received';
+    }
+
+    function connect() {
+      const url = bridgeUrlEl.value.trim();
+      const token = authTokenEl.value.trim();
+      
+      if (!url) {
+        log('Error: Bridge URL is required');
+        return;
+      }
+      
+      if (!token) {
+        log('Error: Auth token is required');
+        return;
+      }
+      
+      updateStatus('connecting', 'Connecting to bridge...');
       connectBtn.disabled = true;
+      log(`Connecting to ${url}...`);
       
-      // Simulate connection
+      try {
+        ws = new WebSocket(url);
+        
+        ws.onopen = () => {
+          log('WebSocket connected, authenticating...');
+          
+          // Send authentication message
+          const authMessage = {
+            type: 'error',
+            payload: {
+              error: {
+                code: 'AUTH',
+                details: {
+                  token: token,
+                  type: 'figma'
+                }
+              }
+            },
+            timestamp: Date.now()
+          };
+          
+          ws.send(JSON.stringify(authMessage));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            log(`Received: ${message.type}`);
+            
+            if (message.type === 'sync_complete' && message.payload.status === 'authenticated') {
+              updateStatus('connected', 'Connected to Storybook bridge');
+              connectBtn.style.display = 'none';
+              disconnectBtn.style.display = 'block';
+              isConnected = true;
+              log('Authentication successful');
+            } else if (message.type === 'token_update' && message.payload.tokens) {
+              updateTokenCount(message.payload.tokens.length);
+              log(`Received ${message.payload.tokens.length} tokens from Storybook`);
+              
+              // Forward message to plugin code
+              parent.postMessage({ pluginMessage: message }, '*');
+            } else if (message.type === 'error') {
+              log(`Bridge error: ${message.payload.error?.message || 'Unknown error'}`);
+              if (message.payload.error?.message === 'Authentication failed') {
+                disconnect();
+              }
+            }
+          } catch (error) {
+            log(`Message parsing error: ${error.message}`);
+          }
+        };
+        
+        ws.onclose = () => {
+          log('WebSocket connection closed');
+          if (isConnected) {
+            updateStatus('disconnected', 'Connection lost');
+            reconnect();
+          } else {
+            updateStatus('disconnected', 'Failed to connect');
+            connectBtn.disabled = false;
+          }
+          isConnected = false;
+        };
+        
+        ws.onerror = (error) => {
+          log(`WebSocket error: ${error.message || 'Connection failed'}`);
+          updateStatus('disconnected', 'Connection error');
+          connectBtn.disabled = false;
+        };
+        
+      } catch (error) {
+        log(`Connection error: ${error.message}`);
+        updateStatus('disconnected', 'Connection failed');
+        connectBtn.disabled = false;
+      }
+    }
+
+    function disconnect() {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      updateStatus('disconnected', 'Disconnected from bridge');
+      connectBtn.style.display = 'block';
+      disconnectBtn.style.display = 'none';
+      connectBtn.disabled = false;
+      isConnected = false;
+      log('Disconnected');
+    }
+
+    function reconnect() {
+      log('Attempting to reconnect in 3 seconds...');
       setTimeout(() => {
-        statusEl.textContent = 'Connected to Storybook';
-        syncBtn.disabled = false;
-        connectBtn.textContent = 'Connected';
-      }, 1000);
+        if (!isConnected) {
+          connect();
+        }
+      }, 3000);
+    }
+
+    // Event listeners
+    connectBtn.addEventListener('click', connect);
+    disconnectBtn.addEventListener('click', disconnect);
+    
+    // Handle messages from plugin code
+    onmessage = (event) => {
+      const message = event.data.pluginMessage;
+      if (message) {
+        if (message.type === 'sync_complete') {
+          log(`Sync result: ${message.payload.status}`);
+          if (message.payload.error) {
+            log(`Errors: ${message.payload.error.message}`);
+          }
+        } else if (message.type === 'error') {
+          log(`Plugin error: ${message.payload.error?.message || 'Unknown error'}`);
+        }
+      }
     };
 
-    syncBtn.onclick = () => {
-      statusEl.textContent = 'Syncing tokens...';
-      syncBtn.disabled = true;
-      
-      // Send sync message to main thread
-      parent.postMessage({
-        pluginMessage: {
-          type: 'token_update',
-          payload: [
-            { name: 'primary-color', value: '#0d99ff', type: 'color', path: ['theme', 'color', 'primary'] }
-          ],
-          timestamp: Date.now()
-        }
-      }, '*');
-      
-      setTimeout(() => {
-        statusEl.textContent = 'Sync completed';
-        syncBtn.disabled = false;
-      }, 2000);
-    };
+    // Auto-connect if both URL and token are provided
+    window.addEventListener('load', () => {
+      if (bridgeUrlEl.value && authTokenEl.value) {
+        log('Auto-connecting with saved credentials...');
+        setTimeout(connect, 500);
+      }
+    });
   </script>
 </body>
 </html>
