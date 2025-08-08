@@ -91,3 +91,6 @@ export const sanitizeToken = (token: unknown): DesignToken | null => {
     path: token.path.map(p => sanitizeString(p)).filter(p => p.length > 0)
   };
 };
+
+// Re-export token mapping utilities
+export * from './token-mapping.js';

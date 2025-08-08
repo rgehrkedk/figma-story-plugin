@@ -91,6 +91,17 @@ export class TokenParser {
     return false;
   }
 
+  private containsColorReference(value: string): boolean {
+    // Check if value contains var() references to other color variables
+    const varMatch = value.match(/var\(--([^)]+)\)/g);
+    if (varMatch) {
+      // For now, consider any var() reference as potentially color-related
+      // In a more sophisticated implementation, we'd track color variables
+      return true;
+    }
+    return false;
+  }
+
   async parseCSS(css: string, filename?: string): Promise<ParseResult> {
     const tokens: DesignToken[] = [];
     const errors: ParseError[] = [];
@@ -120,7 +131,7 @@ export class TokenParser {
         if (sanitizedName.length === 0 || value.length === 0) return;
 
         // Focus on color tokens for this iteration
-        if (this.isColorValue(value)) {
+        if (this.isColorValue(value) || this.containsColorReference(value)) {
           // Use PostCSS value parser for complex values
           const parsedValue = valueParser(value);
           let resolvedValue = value;
@@ -138,7 +149,7 @@ export class TokenParser {
           });
 
           tokens.push({
-            name: `--${sanitizedName}`,
+            name: sanitizedName, // Remove the -- prefix since it's already stored in the name
             value: resolvedValue,
             type: 'color',
             path: ['css', 'custom-properties', sanitizedName]
