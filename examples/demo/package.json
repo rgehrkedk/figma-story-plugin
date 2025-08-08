@@ -1,0 +1,32 @@
+{
+  "name": "figma-story-plugin-demo",
+  "version": "0.1.0",
+  "description": "End-to-end demo for Figma Story Plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bridge:start": "node bridge-server.js",
+    "bridge:dev": "node --watch bridge-server.js",
+    "storybook": "cd storybook && pnpm storybook",
+    "build-storybook": "cd storybook && pnpm build-storybook",
+    "figma:build": "node scripts/build-figma-plugin.js",
+    "build": "pnpm figma:build && cd storybook && pnpm build",
+    "test:e2e": "node scripts/test-e2e.js",
+    "test:bridge-client": "node scripts/test-bridge-client.js",
+    "clean": "rm -rf dist storybook/storybook-static figma-plugin/code.js figma-plugin/ui.html",
+    "setup": "pnpm install && cd storybook && pnpm install"
+  },
+  "keywords": [
+    "figma",
+    "storybook",
+    "design-tokens",
+    "demo"
+  ],
+  "dependencies": {
+    "@figma-story-plugin/bridge": "workspace:*",
+    "@figma-story-plugin/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "ws": "^8.16.0"
+  }
+}
