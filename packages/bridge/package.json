@@ -1,0 +1,41 @@
+{
+  "name": "@figma-story-plugin/bridge",
+  "version": "0.1.0",
+  "description": "WebSocket communication layer for figma-story-plugin",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "keywords": [
+    "figma",
+    "storybook",
+    "websocket",
+    "bridge"
+  ],
+  "author": "rgehrkedk",
+  "license": "MIT",
+  "dependencies": {
+    "@figma-story-plugin/shared": "workspace:*",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "@figma-story-plugin/parser",
+  "version": "0.1.0",
+  "description": "Token parsing and analysis for figma-story-plugin",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "keywords": [
+    "figma",
+    "storybook",
+    "parser",
+    "tokens"
+  ],
+  "author": "rgehrkedk",
+  "license": "MIT",
+  "dependencies": {
+    "@figma-story-plugin/shared": "workspace:*",
+    "@babel/parser": "^7.23.9",
+    "@babel/traverse": "^7.23.9",
+    "@babel/types": "^7.23.9",
+    "postcss": "^8.4.35",
+    "postcss-value-parser": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  }
+}

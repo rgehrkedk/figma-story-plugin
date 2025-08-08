@@ -12,8 +12,8 @@ build/
 out/
 *.local
 
-# Figma plugin specific
-figma-plugin/
+# Figma plugin build outputs (keep source)
+packages/figma-plugin/dist/
 
 # Editor directories and files
 .vscode/*

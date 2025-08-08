@@ -1,0 +1,11 @@
+{
+  "name": "Figma Story Plugin",
+  "id": "figma-story-plugin",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "capabilities": ["inspect"],
+  "enableProposedApi": false,
+  "editorType": ["figma"],
+  "permissions": ["currentuser"]
+}
