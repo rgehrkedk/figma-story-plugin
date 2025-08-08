@@ -1,0 +1,28 @@
+{
+  "name": "@figma-story-plugin/figma-plugin",
+  "version": "0.1.0",
+  "description": "Figma plugin for variable creation",
+  "type": "module",
+  "main": "./dist/code.js",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "figma",
+    "plugin",
+    "variables"
+  ],
+  "author": "rgehrkedk",
+  "license": "MIT",
+  "dependencies": {
+    "@figma-story-plugin/shared": "workspace:*",
+    "@figma-story-plugin/bridge": "workspace:*"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.84.0",
+    "typescript": "^5.3.3"
+  }
+}

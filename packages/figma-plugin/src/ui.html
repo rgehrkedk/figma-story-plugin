@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figma Story Plugin</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      margin: 0;
+      padding: 16px;
+      background: #ffffff;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .header {
+      font-weight: 600;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      color: #666;
+      font-size: 11px;
+    }
+    
+    .button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background: #0d99ff;
+      color: white;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .button:hover {
+      background: #0b8ce8;
+    }
+    
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Figma Story Sync</div>
+    <div class="status" id="status">
+      Ready to sync design tokens
+    </div>
+    <button class="button" id="connectBtn">
+      Connect to Storybook
+    </button>
+    <button class="button" id="syncBtn" disabled>
+      Sync Tokens
+    </button>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const connectBtn = document.getElementById('connectBtn');
+    const syncBtn = document.getElementById('syncBtn');
+
+    // TODO: Implement WebSocket connection to bridge
+    connectBtn.onclick = () => {
+      statusEl.textContent = 'Connecting...';
+      connectBtn.disabled = true;
+      
+      // Simulate connection
+      setTimeout(() => {
+        statusEl.textContent = 'Connected to Storybook';
+        syncBtn.disabled = false;
+        connectBtn.textContent = 'Connected';
+      }, 1000);
+    };
+
+    syncBtn.onclick = () => {
+      statusEl.textContent = 'Syncing tokens...';
+      syncBtn.disabled = true;
+      
+      // Send sync message to main thread
+      parent.postMessage({
+        pluginMessage: {
+          type: 'token_update',
+          payload: [
+            { name: 'primary-color', value: '#0d99ff', type: 'color', path: ['theme', 'color', 'primary'] }
+          ],
+          timestamp: Date.now()
+        }
+      }, '*');
+      
+      setTimeout(() => {
+        statusEl.textContent = 'Sync completed';
+        syncBtn.disabled = false;
+      }, 2000);
+    };
+  </script>
+</body>
+</html>
